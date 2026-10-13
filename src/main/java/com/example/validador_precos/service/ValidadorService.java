@@ -1,5 +1,6 @@
 package com.example.validador_precos.service;
 
+import com.example.validador_precos.dtos.ValidacaoReponse;
 import com.example.validador_precos.models.Produto;
 import com.example.validador_precos.repository.ProdutoRepository;
 import org.springframework.http.HttpStatusCode;
@@ -27,7 +28,15 @@ public class ValidadorService {
         BigDecimal custoTotal = custoDoPlastico.add(produto.getOutrosCustos());
         BigDecimal precoMinimo = custoTotal.multiply(new BigDecimal("1.15"));
         return precoMinimo.setScale(2, RoundingMode.HALF_UP);
+    }
 
+    public ValidacaoReponse validar(String nome, BigDecimal valorProposto){
+        Produto produto = buscarProduto(nome);
+        BigDecimal precoMinimo = calcularPrecoMinimo(produto);
+        if (valorProposto.compareTo(precoMinimo) >= 0){
+            return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,true);
+        }
+        return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,false);
     }
 
 
