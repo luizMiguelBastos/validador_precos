@@ -24,9 +24,9 @@ public class ValidadorService {
         return produtoRepository.findByNome(nome).orElseThrow(() -> new ResponseStatusException(HttpStatusCode.valueOf(404)));
     }
 
-    public BigDecimal calcularPrecoMinimo(Produto produto){
+    public BigDecimal calcularPrecoMinimo(Produto produto, BigDecimal cotacaoDolar){
         BigDecimal custoDoPlastico = produto.getPesoKg().multiply(produto.getPrecoMateriaPrimaUsdKg())
-                .multiply(cotacaoService.buscarCotacaoDolar());
+                .multiply(cotacaoDolar);
         BigDecimal custoTotal = custoDoPlastico.add(produto.getOutrosCustos());
         BigDecimal precoMinimo = custoTotal.multiply(new BigDecimal("1.15"));
         return precoMinimo.setScale(2, RoundingMode.HALF_UP);
@@ -34,11 +34,12 @@ public class ValidadorService {
 
     public ValidacaoReponse validar(String nome, BigDecimal valorProposto){
         Produto produto = buscarProduto(nome);
-        BigDecimal precoMinimo = calcularPrecoMinimo(produto);
+        BigDecimal cotacaoDolar = cotacaoService.buscarCotacaoDolar();
+        BigDecimal precoMinimo = calcularPrecoMinimo(produto, cotacaoDolar);
         if (valorProposto.compareTo(precoMinimo) >= 0){
-            return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,true);
+            return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,cotacaoDolar,true);
         }
-        return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,false);
+        return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,cotacaoDolar,false);
     }
 
 

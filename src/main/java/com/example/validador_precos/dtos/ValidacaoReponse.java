@@ -6,6 +6,7 @@ public record ValidacaoReponse(
         String nomeproduto,
         BigDecimal valorProposto,
         BigDecimal valorMinimo,
+        BigDecimal cotacaoDolar,
         Boolean aprovado
 ) {
 }
