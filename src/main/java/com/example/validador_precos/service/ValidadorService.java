@@ -14,8 +14,10 @@ import java.math.RoundingMode;
 public class ValidadorService {
 
     private ProdutoRepository produtoRepository;
-    public ValidadorService(ProdutoRepository produtoRepository) {
+    private CotacaoService cotacaoService;
+    public ValidadorService(ProdutoRepository produtoRepository, CotacaoService cotacaoService) {
         this.produtoRepository = produtoRepository;
+        this.cotacaoService = cotacaoService;
     }
 
     public Produto buscarProduto(String nome) {
@@ -24,7 +26,7 @@ public class ValidadorService {
 
     public BigDecimal calcularPrecoMinimo(Produto produto){
         BigDecimal custoDoPlastico = produto.getPesoKg().multiply(produto.getPrecoMateriaPrimaUsdKg())
-                .multiply(new BigDecimal("5.40"));
+                .multiply(cotacaoService.buscarCotacaoDolar());
         BigDecimal custoTotal = custoDoPlastico.add(produto.getOutrosCustos());
         BigDecimal precoMinimo = custoTotal.multiply(new BigDecimal("1.15"));
         return precoMinimo.setScale(2, RoundingMode.HALF_UP);
