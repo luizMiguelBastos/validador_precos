@@ -15,9 +15,12 @@ public class ValidadorService {
 
     private ProdutoRepository produtoRepository;
     private CotacaoService cotacaoService;
-    public ValidadorService(ProdutoRepository produtoRepository, CotacaoService cotacaoService) {
+    private ExplicacaoService explicacaoService;
+    public ValidadorService(ProdutoRepository produtoRepository, CotacaoService cotacaoService,
+                            ExplicacaoService explicacaoService) {
         this.produtoRepository = produtoRepository;
         this.cotacaoService = cotacaoService;
+        this.explicacaoService = explicacaoService;
     }
 
     public Produto buscarProduto(String nome) {
@@ -36,10 +39,9 @@ public class ValidadorService {
         Produto produto = buscarProduto(nome);
         BigDecimal cotacaoDolar = cotacaoService.buscarCotacaoDolar();
         BigDecimal precoMinimo = calcularPrecoMinimo(produto, cotacaoDolar);
-        if (valorProposto.compareTo(precoMinimo) >= 0){
-            return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,cotacaoDolar,true);
-        }
-        return new ValidacaoReponse(produto.getNome(),valorProposto,precoMinimo,cotacaoDolar,false);
+        boolean aprovado = valorProposto.compareTo(precoMinimo) >= 0;
+        String explicacao = explicacaoService.explicar(produto.getNome(), valorProposto, precoMinimo, cotacaoDolar, aprovado);
+        return new ValidacaoReponse(produto.getNome(), valorProposto, precoMinimo, cotacaoDolar, aprovado, explicacao);
     }
 
 

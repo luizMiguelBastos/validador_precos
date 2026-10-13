@@ -7,6 +7,7 @@ public record ValidacaoReponse(
         BigDecimal valorProposto,
         BigDecimal valorMinimo,
         BigDecimal cotacaoDolar,
-        Boolean aprovado
+        Boolean aprovado,
+        String explicacao
 ) {
 }
