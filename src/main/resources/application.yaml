@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: validador-precos
+  jpa:
+    defer-datasource-initialization: true
+  h2:
+    console:
+      enabled: true
