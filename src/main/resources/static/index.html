@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Validador de Preços</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1d2330;
+      --muted: #667085;
+      --border: #d9dde5;
+      --primary: #1f4e8c;
+      --ok-bg: #e8f6ee;
+      --ok: #1e7a46;
+      --no-bg: #fdecec;
+      --no: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+    main { width: 100%; max-width: 480px; }
+    h1 { font-size: 24px; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--primary);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    #resultado { margin-top: 16px; display: none; }
+    .status { font-size: 20px; font-weight: 700; margin: 0 0 12px; }
+    .aprovado { background: var(--ok-bg); border-color: var(--ok); }
+    .aprovado .status { color: var(--ok); }
+    .bloqueado { background: var(--no-bg); border-color: var(--no); }
+    .bloqueado .status { color: var(--no); }
+    .erro { background: var(--no-bg); border-color: var(--no); color: var(--no); }
+    dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0 0 12px; font-size: 15px; }
+    dt { color: var(--muted); }
+    dd { margin: 0; font-weight: 600; text-align: right; }
+    .ia { border-top: 1px solid rgba(0,0,0,.1); padding-top: 12px; font-size: 15px; line-height: 1.5; }
+    .ia span { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Validador de Preços</h1>
+  <p class="sub">Confere se o preço proposto cobre o custo e a margem mínima de 15%.</p>
+
+  <form id="form" class="card">
+    <label for="nome">Produto</label>
+    <input id="nome" value="ABS" required>
+
+    <label for="valor">Preço proposto por peça (R$)</label>
+    <input id="valor" type="number" step="0.01" min="0.01" placeholder="Ex.: 1.00" required>
+
+    <button id="botao" type="submit">Validar</button>
+  </form>
+
+  <div id="resultado" class="card"></div>
+</main>
+
+<script>
+  const form = document.getElementById("form");
+  const botao = document.getElementById("botao");
+  const resultado = document.getElementById("resultado");
+
+  const reais = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const dolar = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 4 });
+
+  function mostrarErro(mensagem) {
+    resultado.className = "card erro";
+    resultado.textContent = mensagem;
+    resultado.style.display = "block";
+  }
+
+  form.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    botao.disabled = true;
+    botao.textContent = "Validando... a IA pode levar alguns segundos";
+    resultado.style.display = "none";
+
+    try {
+      const resposta = await fetch("/validar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: document.getElementById("nome").value.trim(),
+          valorProposto: Number(document.getElementById("valor").value)
+        })
+      });
+
+      if (resposta.status === 404) return mostrarErro("Produto não encontrado.");
+      if (resposta.status === 400) return mostrarErro("Dados inválidos. Confira o produto e o preço.");
+      if (!resposta.ok) return mostrarErro("Erro ao validar (HTTP " + resposta.status + ").");
+
+      const dados = await resposta.json();
+
+      resultado.className = "card " + (dados.aprovado ? "aprovado" : "bloqueado");
+      resultado.innerHTML = `
+        <p class="status">${dados.aprovado ? "Aprovado" : "Bloqueado"}</p>
+        <dl>
+          <dt>Produto</dt><dd></dd>
+          <dt>Preço proposto</dt><dd>${reais(dados.valorProposto)}</dd>
+          <dt>Preço mínimo</dt><dd>${reais(dados.valorMinimo)}</dd>
+          <dt>Dólar usado (Banco Central)</dt><dd>${dolar(dados.cotacaoDolar)}</dd>
+        </dl>
+        <div class="ia"><span>Explicação da IA</span><p style="margin:0"></p></div>
+      `;
+      // textContent evita que o texto vindo da API seja interpretado como HTML
+      resultado.querySelector("dd").textContent = dados.nomeproduto;
+      resultado.querySelector(".ia p").textContent = dados.explicacao;
+      resultado.style.display = "block";
+    } catch (e) {
+      mostrarErro("Não foi possível conectar à API. Ela está rodando?");
+    } finally {
+      botao.disabled = false;
+      botao.textContent = "Validar";
+    }
+  });
+</script>
+</body>
+</html>
